@@ -1,7 +1,11 @@
 import React, { Component } from "react";
 import SolidityDriveContract from "./contracts/SolidityDrive.json";
 import getWeb3 from "./getWeb3";
-
+import { StyledDropZone } from 'react-drop-zone';
+import "react-drop-zone/dist/styles.css";
+import "bootstrap/dist/css/bootstrap.css";
+import { Table } from 'reactstrap';
+import FileIcon, {defaultStyles} from 'react-file-icon';
 import "./App.css";
 
 class App extends Component {
@@ -49,8 +53,25 @@ class App extends Component {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
-      null
-      // TODO
+      <div className="App">
+        <div className="container pt-3">
+          <StyledDropZone />
+          <Table>
+            <thead>
+              <th>Type</th>
+              <th className="text-left">File Name</th>
+              <th className="text-right">Date</th>
+            </thead>
+            <tbody>
+              <tr>
+                <td><FileIcon size={30} extension="docx" {...defaultStyles.docx}/></td>
+                <td className="text-left">File.txt</td>
+                <td className="text-right">03/02/2020</td>
+              </tr>
+            </tbody>
+          </Table>
+        </div>
+      </div>
     );
   }
 }
