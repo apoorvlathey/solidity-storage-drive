@@ -5,7 +5,10 @@ import { StyledDropZone } from 'react-drop-zone';
 import "react-drop-zone/dist/styles.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { Table } from 'reactstrap';
-import FileIcon, {defaultStyles} from 'react-file-icon';
+import FileIcon, { defaultStyles } from 'react-file-icon';
+import fileReaderPullStream from 'pull-file-reader';
+import ipfs from './ipfs';
+import Moment from 'react-moment'
 import "./App.css";
 
 class App extends Component {
@@ -30,7 +33,7 @@ class App extends Component {
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      this.setState({ web3, accounts, contract: instance }, this.getFiles);
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -41,33 +44,64 @@ class App extends Component {
   };
 
   getFiles = async () => {
-    // TODO
+    try {
+      const { accounts, contract } = this.state;
+      let filesLength = await contract.methods.getLength().call({ from: accounts[0] });
+      let files = []
+
+      for (let i = 0; i < filesLength; i++) {
+        let file = await contract.methods.getFile(i).call({ from: accounts[0] })
+        files.push(file);
+      }
+
+      this.setState({ solidityDrive: files });
+    } catch (error) {
+      console.log(error)
+    }
   }
 
-  onDrop = async () => {
-    // TODO
+  onDrop = async (file) => {
+    try {
+      const {accounts, contract} = this.state;
+      const stream = fileReaderPullStream(file);
+      const result = await ipfs.add(stream);
+      const timestamp = Math.round(+new Date()/1000);
+      const type = file.name.substr(file.name.lastIndexOf(".")+1);
+      let fileuploaded = await contract.methods.add(result[0].hash, file.name, type, timestamp).send({from: accounts[0], gas: 300000});
+      console.log(fileuploaded);
+      //debugger;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   render() {
+    const {solidityDrive} = this.state;
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
       <div className="App">
         <div className="container pt-3">
-          <StyledDropZone />
+          <StyledDropZone onDrop={this.onDrop} />
           <Table>
             <thead>
-              <th>Type</th>
-              <th className="text-left">File Name</th>
-              <th className="text-right">Date</th>
+              <tr>
+                <th>Type</th>
+                <th className="text-left">File Name</th>
+                <th className="text-right">Date</th>
+              </tr>
             </thead>
             <tbody>
-              <tr>
-                <td><FileIcon size={30} extension="docx" {...defaultStyles.docx}/></td>
-                <td className="text-left">File.txt</td>
-                <td className="text-right">03/02/2020</td>
+              {solidityDrive !== [] ? solidityDrive.map((item, key) => (
+                <tr>
+                <td><FileIcon size={30} extension={item[2]} {...defaultStyles[item[2]]} /></td>
+                <td className="text-left"><a href={"https://ipfs.io/ipfs/"+item[0]}>{item[1]}</a></td>
+                <td className="text-right">
+                  <Moment format="YYYY/MM/DD" unix>{item[3]}</Moment>
+                </td>
               </tr>
+              )) : null}
             </tbody>
           </Table>
         </div>
